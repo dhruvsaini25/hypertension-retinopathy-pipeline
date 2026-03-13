@@ -3,10 +3,9 @@ import torch
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 IMAGE_SIZE = 224
-EPOCHS = 15
+EPOCHS = 10
 BATCH_SIZE = 8
 LR = 3e-4
-
 NUM_CLASSES_HYPERTENSION = 2
 NUM_CLASSES_RETINOPATHY = 4
 

@@ -3,8 +3,20 @@ from config import IMAGE_SIZE
 
 train_transform = transforms.Compose([
     transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomRotation(10),
+
+    # geometric augmentations
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomVerticalFlip(p=0.5),
+    transforms.RandomRotation(20),
+
+    # lighting variations
+    transforms.ColorJitter(
+        brightness=0.2,
+        contrast=0.2,
+        saturation=0.1,
+        hue=0.02
+    ),
+
     transforms.ToTensor(),
 ])
 

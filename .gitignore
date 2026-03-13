@@ -1,0 +1,13 @@
+# python cache
+__pycache__/
+*.pyc
+
+# dataset
+dataset/
+
+# logs
+*.log
+
+# virtual environments
+venv/
+env/

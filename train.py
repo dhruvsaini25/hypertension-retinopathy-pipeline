@@ -48,7 +48,9 @@ val_loader = DataLoader(
 model = get_model(NUM_CLASSES_HYPERTENSION)
 model.to(DEVICE)
 
-criterion = nn.CrossEntropyLoss()
+weights = torch.tensor([1.0, 1.5]).to(DEVICE)
+
+criterion = nn.CrossEntropyLoss(weight=weights)
 optimizer = optim.Adam(model.parameters(), lr=LR)
 
 best_val_loss = float("inf")

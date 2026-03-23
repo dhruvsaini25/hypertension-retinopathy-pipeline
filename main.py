@@ -90,20 +90,30 @@ class RetinaDataset(Dataset):
         self.image_dir = image_dir
         self.transform = transform
 
+        print("CSV Columns:", self.df.columns)
+
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
 
-        img_name = self.df.iloc[idx, 0]
-        label = self.df.iloc[idx, 1]
+        img_name = self.df["Image"][idx]
+        label = self.df["Hypertensive"][idx]
 
         img_path = os.path.join(self.image_dir, img_name)
+
+        # Safety check
+        if not os.path.exists(img_path):
+            raise FileNotFoundError(f"{img_path} not found!")
 
         image = cv2.imread(img_path)
 
         if image is None:
-            raise ValueError(f"Image not found: {img_path}")
+            raise ValueError(f"Failed to read image: {img_path}")
+
+        # DEBUG (only first few samples)
+        if idx < 3:
+            print(f"[DEBUG] Image: {img_name}, Label: {label}")
 
         # Crop fundus
         image = crop_fundus(image)
@@ -137,11 +147,9 @@ def get_model(num_classes):
 
     model = efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
 
-    # Freeze backbone
     for param in model.features.parameters():
         param.requires_grad = False
 
-    # Unfreeze last layers
     for param in model.features[-2:].parameters():
         param.requires_grad = True
 
@@ -175,7 +183,8 @@ def train():
 
     model = get_model(NUM_CLASSES).to(DEVICE)
 
-    weights = torch.tensor([1.0, 1.5]).to(DEVICE)
+    # Slightly reduced weight to control false positives
+    weights = torch.tensor([1.0, 1.3]).to(DEVICE)
     criterion = nn.CrossEntropyLoss(weight=weights)
 
     optimizer = optim.Adam(model.parameters(), lr=LR)
@@ -184,7 +193,6 @@ def train():
 
     for epoch in range(EPOCHS):
 
-        # TRAIN
         model.train()
         total_train_loss = 0
 
@@ -230,7 +238,6 @@ def train():
         print(f"Train Loss: {avg_train_loss:.4f}")
         print(f"Validation Loss: {avg_val_loss:.4f}")
 
-        # SAVE BEST MODEL
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             torch.save(model.state_dict(), "best_model.pth")

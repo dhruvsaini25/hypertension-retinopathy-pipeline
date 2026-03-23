@@ -7,10 +7,6 @@ from PIL import Image
 
 
 def crop_fundus(img):
-    """
-    Remove black borders around fundus image
-    """
-
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     _, thresh = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)
@@ -28,9 +24,7 @@ def crop_fundus(img):
 
     x, y, w, h = cv2.boundingRect(largest)
 
-    cropped = img[y:y+h, x:x+w]
-
-    return cropped
+    return img[y:y+h, x:x+w]
 
 
 class RetinaDataset(Dataset):
@@ -41,57 +35,45 @@ class RetinaDataset(Dataset):
         self.image_dir = image_dir
         self.transform = transform
 
-    def __len__(self):
+        print("CSV Columns:", self.df.columns)  # debug once
 
+    def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
 
-        img_name = self.df.iloc[idx, 0]
-        label = self.df.iloc[idx, 1]
+        img_name = self.df["Image"][idx]
+        label = self.df["Hypertensive"][idx]
 
         img_path = os.path.join(self.image_dir, img_name)
+
+        # Check if file exists
+        if not os.path.exists(img_path):
+            raise FileNotFoundError(f"{img_path} not found!")
 
         image = cv2.imread(img_path)
 
         if image is None:
-            raise ValueError(f"Image not found: {img_path}")
-
-        # ----------------------------------
-        # 1️⃣ Crop fundus region
-        # ----------------------------------
-
+            raise ValueError(f"Failed to read image: {img_path}")
+        
+        # 1️⃣ Crop fundus
         image = crop_fundus(image)
 
-        # ----------------------------------
-        # 2️⃣ Extract green channel
-        # ----------------------------------
-
+        # 2️⃣ Green channel
         green = image[:, :, 1]
 
-        # ----------------------------------
-        # 3️⃣ CLAHE vessel enhancement
-        # ----------------------------------
-
+        # 3️⃣ CLAHE
         clahe = cv2.createCLAHE(
             clipLimit=2.0,
             tileGridSize=(8, 8)
         )
-
         green = clahe.apply(green)
 
-        # ----------------------------------
-        # 4️⃣ Convert back to 3-channel image
-        # ----------------------------------
-
+        # 4️⃣ Back to 3 channel
         image = cv2.merge([green, green, green])
-
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # ----------------------------------
-        # 5️⃣ Convert to PIL for transforms
-        # ----------------------------------
-
+        # 5️⃣ PIL
         image = Image.fromarray(image)
 
         if self.transform:
